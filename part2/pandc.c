@@ -9,7 +9,7 @@
 
 
 /* 
- * Function to add item.
+ * Function to remove item.
  * Item removed is returned
  */
 int dequeue_item()

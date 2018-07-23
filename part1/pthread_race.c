@@ -20,10 +20,10 @@
  * nanosleep. 
  * For exmaple : nanosleep(&ts, NULL);
  */
-//struct timespec ts = {2, 0 };
 struct timespec ts = { 0, 10 };              /** 10ns - one "shake", (as in a "shake of a lamb's tail"); approximate time of one generation of a nuclear chain reaction with fast neutrons */
 
 static volatile int global_variable = 0;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void * thread_sub(void *);
 static void * thread_add(void *);
@@ -66,18 +66,28 @@ int main(int argc, char * argv[])
 
 static void * thread_sub(void * args)
 {
+    pthread_mutex_lock(&mutex);
+
     int temp = global_variable;
     temp -= 1;
     nanosleep(&ts, NULL);
     global_variable = temp;
+
+    pthread_mutex_unlock(&mutex);
+
     return (void *) print_thread_info((size_t) args);
 }
 
 static void * thread_add(void * args)
 {
+    pthread_mutex_lock(&mutex);
+
     int temp = global_variable;
     temp += 1;
     global_variable = temp;
+
+    pthread_mutex_unlock(&mutex);
+
     return (void *) print_thread_info((size_t) args);
 }
 

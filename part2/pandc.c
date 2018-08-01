@@ -10,7 +10,7 @@
 
 /** All hail OOP! */
 typedef struct __node_t {
-    int value;
+    size_t value;
     struct __node_t *next;
 } node_t;
 
@@ -30,8 +30,8 @@ typedef struct __queue_t {
 
 
 void init(queue_t *, size_t);
-int dequeue_item();
-int enqueue_item(int);
+int dequeue_item(queue_t *);
+ssize_t enqueue_item(queue_t *, size_t);
 size_t is_queue_full(queue_t *);
 size_t is_queue_empty(queue_t *);
 
@@ -73,8 +73,9 @@ void init(queue_t *q, size_t queue_size)
  * Function to remove item.
  * Item removed is returned
  */
-int dequeue_item()
+int dequeue_item(queue_t *q)
 {
+    printf("Item to dequeue: %zu\n", q->head->value);
 
     return 0;
 }
@@ -88,10 +89,27 @@ int dequeue_item()
  * the return value, do not change the
  * return type to void. 
  */
-int enqueue_item(int item)
+ssize_t enqueue_item(queue_t *q, size_t item)
 {
-    printf("Enqueued: %d\n", item);
-    return 0;
+    node_t *new_node = malloc(sizeof(node_t));
+    if (new_node == NULL)
+    {
+        perror("Failed to allocate memory for new node...");
+        return -1;
+    }
+    else
+    {
+        new_node->value = item;
+        new_node->next = NULL;
+
+        pthread_mutex_lock(&q->tail_lock);
+        q->tail->next = new_node;
+        q->tail = new_node;
+        pthread_mutex_unlock(&q->tail_lock);
+
+        printf("Enqueued: %zu\n", item);
+        return item;
+    }
 }
 
 

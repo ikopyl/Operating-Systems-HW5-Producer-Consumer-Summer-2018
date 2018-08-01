@@ -31,7 +31,8 @@ typedef struct __queue_t {
 void init(queue_t *, size_t);
 int dequeue_item();
 int enqueue_item(int);
-
+size_t is_queue_full(queue_t *);
+size_t is_queue_empty(queue_t *);
 
 
 int main(int argc, char * argv[])
@@ -84,4 +85,20 @@ int enqueue_item(int item)
     printf("Enqueued: %d\n", item);
     return 0;
 }
+
+
+size_t is_queue_full(queue_t *q)
+{
+    if (q->current_capacity == q->max_capacity)
+        return 1;
+    return 0;
+}
+
+size_t is_queue_empty(queue_t *q)
+{
+    if (q->current_capacity == 0)
+        return 1;
+    return 0;
+}
+
 

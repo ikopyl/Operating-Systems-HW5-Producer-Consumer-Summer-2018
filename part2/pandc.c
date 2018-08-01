@@ -8,6 +8,7 @@
 #include <semaphore.h>
 
 
+/** All hail OOP! */
 typedef struct __node_t {
     int value;
     struct __node_t *next;
@@ -37,6 +38,13 @@ size_t is_queue_empty(queue_t *);
 
 int main(int argc, char * argv[])
 {
+
+    queue_t queue;
+    init(&queue, 10);
+
+    printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+    printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+    printf("Size of queue: %zu\n", sizeof(queue));
 
     return 0;
 }

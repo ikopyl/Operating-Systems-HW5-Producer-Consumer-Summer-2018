@@ -57,7 +57,8 @@ int main(int argc, char * argv[])
     size_t j = 0;
     while (j < 100) {
         ssize_t val = *(&queue.node_array[j % 10]->value);
-        printf("%zu\n", val);
+        printf("Current value: %zu\n", val);
+        printf("\tand next: %zu\n", *(&queue.node_array[j % 10]->next->value));
         j++;
     }
 
@@ -132,8 +133,8 @@ ssize_t enqueue_item(queue_t *q, size_t item)
         pthread_mutex_unlock(&q->tail_lock);
 
 //        printf("Enqueued: %zu\n", item);
-        printf("Enqueued: %zu\n", *(&q->tail->value));
-        printf("Enqueued: %zu\n", *(&q->node_array[q->current_capacity-1]->value));
+        printf("Enqueued: %zu\n", *(&q->tail->value));                                      // DEBUG INFO
+        printf("Enqueued: %zu\n", *(&q->node_array[q->current_capacity-1]->value));         // DEBUG INFO
 
         return item;
     }

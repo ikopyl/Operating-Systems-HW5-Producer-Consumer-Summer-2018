@@ -17,14 +17,15 @@ typedef struct __node_t {
 typedef struct __queue_t {
     node_t *head;
     node_t *tail;
-    pthread_mutex_t head_lock;
-    pthread_mutex_t tail_lock;
 
     size_t max_capacity;
     size_t current_capacity;
-    size_t index;
 
     node_t ** node_array;
+
+    pthread_mutex_t head_lock;
+    pthread_mutex_t tail_lock;
+
 } queue_t;
 
 
@@ -46,6 +47,20 @@ int main(int argc, char * argv[])
     printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
     printf("Size of queue: %zu\n", sizeof(queue));
 
+    for (size_t i = 1; i <= 10; i++) {
+        printf("i = %zu\n", i);
+        enqueue_item(&queue, i);
+        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+    }
+
+    size_t j = 0;
+    while (j < 100) {
+        ssize_t val = *(&queue.node_array[j % 10]->value);
+        printf("%zu\n", val);
+        j++;
+    }
+
     return 0;
 }
 
@@ -60,10 +75,9 @@ void init(queue_t *q, size_t queue_size)
     q->node_array = calloc(queue_size, sizeof(node_t *));
     q->max_capacity = queue_size;
     q->current_capacity = 0;
-    q->index = 0;
 
     q->head = q->tail = tmp;
-    q->node_array[q->index] = tmp;
+    q->node_array[q->current_capacity] = tmp;
 
     pthread_mutex_init(&q->head_lock, NULL);
     pthread_mutex_init(&q->tail_lock, NULL);
@@ -103,11 +117,24 @@ ssize_t enqueue_item(queue_t *q, size_t item)
         new_node->next = NULL;
 
         pthread_mutex_lock(&q->tail_lock);
+
+
         q->tail->next = new_node;
         q->tail = new_node;
+
+
+        q->node_array[q->current_capacity++] = new_node;
+
+        if (is_queue_full(q)) {
+            q->tail->next = q->head;
+        }
+
         pthread_mutex_unlock(&q->tail_lock);
 
-        printf("Enqueued: %zu\n", item);
+//        printf("Enqueued: %zu\n", item);
+        printf("Enqueued: %zu\n", *(&q->tail->value));
+        printf("Enqueued: %zu\n", *(&q->node_array[q->current_capacity-1]->value));
+
         return item;
     }
 }

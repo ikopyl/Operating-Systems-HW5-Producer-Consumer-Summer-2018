@@ -174,9 +174,6 @@ ssize_t enqueue_item(queue_t *q, size_t item)
 
         pthread_mutex_unlock(&q->tail_lock);
 
-//        printf("Enqueued: %zu\n", q->tail->value);                                  // DEBUG INFO
-//        printf("Enqueued: %zu\n", q->node_array[q->current_capacity-1]->value);     // DEBUG INFO
-
         return q->tail->value;
     }
 }

@@ -161,6 +161,9 @@ ssize_t enqueue_item(queue_t *q, size_t item)
         q->tail->next = new_node;
         q->tail = new_node;
 
+        if (is_queue_empty(q)) {
+            q->head = q->tail;
+        }
 
         q->node_array[q->current_capacity++] = new_node;
 

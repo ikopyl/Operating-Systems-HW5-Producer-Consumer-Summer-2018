@@ -36,6 +36,8 @@ ssize_t enqueue_item(queue_t *, size_t);
 size_t is_queue_full(queue_t *);
 size_t is_queue_empty(queue_t *);
 
+void print_queue_recursively(node_t *, node_t *);
+
 
 int main(int argc, char * argv[])
 {
@@ -58,20 +60,22 @@ int main(int argc, char * argv[])
 
     puts("---------------------------------");
 
-    size_t j = 0;
-    while (j < 30) {
-        ssize_t val = queue.node_array[j % queue.current_capacity]->value;              // DEBUG INFO
-        printf("Current value: %zu\n", val);
-        printf("\tand next: %zu\n", queue.node_array[j % queue.current_capacity]->next->value);     // DEBUG INFO
-        j++;
-    }
+//    size_t j = 0;
+//    while (j < 30) {
+//        ssize_t val = queue.node_array[j % queue.current_capacity]->value;              // DEBUG INFO
+//        printf("Current value: %zu\n", val);
+//        printf("\tand next: %zu\n", queue.node_array[j % queue.current_capacity]->next->value);     // DEBUG INFO
+//        j++;
+//    }
+
+    print_queue_recursively(queue.head, queue.tail);
 
     puts("---------------------------------");
 
     printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
     printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
 
-    for (size_t i = 1; i <= 10; i++) {
+    for (size_t i = 1; i <= 5; i++) {
         printf("i = %zu\n", i);
 
         printf("Dequeued: %zu\n", dequeue_item(&queue));
@@ -80,10 +84,24 @@ int main(int argc, char * argv[])
         printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
     }
 
+    print_queue_recursively(queue.head, queue.tail);
 
 
     return 0;
 }
+
+
+/** Tribute to Jozo */
+void print_queue_recursively(node_t * head, node_t * tail)
+{
+    printf("%zu\n", head->value);
+    if (head == tail) {
+        return;
+    } else {
+        print_queue_recursively(head->next, tail);
+    }
+}
+
 
 
 
@@ -125,6 +143,8 @@ ssize_t dequeue_item(queue_t *q)
         ssize_t old_value = q->head->value;
         q->head = new_head;
 
+        q->tail->next = q->head;
+
         q->current_capacity--;
 
         pthread_mutex_unlock(&q->head_lock);
@@ -162,7 +182,7 @@ ssize_t enqueue_item(queue_t *q, size_t item)
         q->tail->next = new_node;
         q->tail = new_node;
 
-        if (is_queue_empty(q)) {
+        if (is_queue_empty(q)) {                /** for now q->current_capacity constitutes the emptiness/fullness of the queue */
             q->head = q->tail;
         }
 
@@ -182,6 +202,7 @@ ssize_t enqueue_item(queue_t *q, size_t item)
 size_t is_queue_full(queue_t *q)
 {
     if (q->current_capacity == q->max_capacity)
+//    if (q->tail != q->head && q->head->next == q->tail)
         return 1;
     return 0;
 }
@@ -189,6 +210,7 @@ size_t is_queue_full(queue_t *q)
 size_t is_queue_empty(queue_t *q)
 {
     if (q->current_capacity == 0)
+//    if (q->head == q->tail)
         return 1;
     return 0;
 }

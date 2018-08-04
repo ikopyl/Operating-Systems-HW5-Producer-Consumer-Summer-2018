@@ -31,7 +31,7 @@ typedef struct __queue_t {
 
 
 void init(queue_t *, size_t);
-int dequeue_item(queue_t *);
+ssize_t dequeue_item(queue_t *);
 ssize_t enqueue_item(queue_t *, size_t);
 size_t is_queue_full(queue_t *);
 size_t is_queue_empty(queue_t *);
@@ -96,11 +96,28 @@ void init(queue_t *q, size_t queue_size)
  * Function to remove item.
  * Item removed is returned
  */
-int dequeue_item(queue_t *q)
+ssize_t dequeue_item(queue_t *q)
 {
-    printf("Item to dequeue: %zu\n", q->head->value);
+    pthread_mutex_lock(&q->head_lock);
 
-    return 0;
+    node_t *tmp = q->head;
+    node_t *new_head = tmp->next;
+    if (new_head == NULL)
+    {
+        pthread_mutex_unlock(&q->head_lock);
+        perror("Failed to dequeue an item: the queue is empty...");
+        return -1;
+    }
+    else
+    {
+        ssize_t old_value = q->head->value;
+        q->head = new_head;
+
+        pthread_mutex_unlock(&q->head_lock);
+        free(tmp);
+
+        return old_value;
+    }
 }
 
 /* 

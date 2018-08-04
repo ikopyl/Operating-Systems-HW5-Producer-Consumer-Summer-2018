@@ -49,18 +49,26 @@ int main(int argc, char * argv[])
 
     for (size_t i = 1; i <= 10; i++) {
         printf("i = %zu\n", i);
-        enqueue_item(&queue, i);
+
+        printf("Enqueued: %zu\n", enqueue_item(&queue, i));
+
         printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
         printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
     }
 
+    puts("---------------------------------");
+
     size_t j = 0;
-    while (j < 100) {
-        ssize_t val = *(&queue.node_array[j % 10]->value);
+    while (j < 30) {
+        ssize_t val = queue.node_array[j % queue.max_capacity]->value;
         printf("Current value: %zu\n", val);
-        printf("\tand next: %zu\n", *(&queue.node_array[j % 10]->next->value));
+        printf("\tand next: %zu\n", queue.node_array[j % queue.max_capacity]->next->value);
         j++;
     }
+
+    puts("---------------------------------");
+
+
 
     return 0;
 }
@@ -132,11 +140,10 @@ ssize_t enqueue_item(queue_t *q, size_t item)
 
         pthread_mutex_unlock(&q->tail_lock);
 
-//        printf("Enqueued: %zu\n", item);
-        printf("Enqueued: %zu\n", *(&q->tail->value));                                      // DEBUG INFO
-        printf("Enqueued: %zu\n", *(&q->node_array[q->current_capacity-1]->value));         // DEBUG INFO
+//        printf("Enqueued: %zu\n", q->tail->value);                                  // DEBUG INFO
+//        printf("Enqueued: %zu\n", q->node_array[q->current_capacity-1]->value);     // DEBUG INFO
 
-        return item;
+        return q->tail->value;
     }
 }
 

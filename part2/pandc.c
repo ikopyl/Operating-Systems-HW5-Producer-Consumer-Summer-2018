@@ -21,7 +21,7 @@ typedef struct __queue_t {
     size_t max_capacity;
     size_t current_capacity;
 
-    node_t ** node_array;
+//    node_t ** node_array;
 
     pthread_mutex_t head_lock;
     pthread_mutex_t tail_lock;
@@ -87,6 +87,17 @@ int main(int argc, char * argv[])
     print_queue_recursively(queue.head, queue.tail);
 
 
+    for (size_t i = 1; i <= 5; i++) {
+        printf("i = %zu\n", i);
+
+        printf("Dequeued: %zu\n", dequeue_item(&queue));
+
+        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+    }
+
+    print_queue_recursively(queue.head, queue.tail);
+
     return 0;
 }
 
@@ -111,12 +122,12 @@ void init(queue_t *q, size_t queue_size)
     tmp->value = 0;
     tmp->next = NULL;
 
-    q->node_array = calloc(queue_size, sizeof(node_t *));
+//    q->node_array = calloc(queue_size, sizeof(node_t *));
     q->max_capacity = queue_size;
     q->current_capacity = 0;
 
     q->head = q->tail = tmp;
-    q->node_array[q->current_capacity] = tmp;
+//    q->node_array[q->current_capacity] = tmp;
 
     pthread_mutex_init(&q->head_lock, NULL);
     pthread_mutex_init(&q->tail_lock, NULL);
@@ -186,7 +197,8 @@ ssize_t enqueue_item(queue_t *q, size_t item)
             q->head = q->tail;
         }
 
-        q->node_array[q->current_capacity++] = new_node;
+//        q->node_array[q->current_capacity++] = new_node;
+        q->current_capacity++;
 
         if (is_queue_full(q)) {
             q->tail->next = q->head;

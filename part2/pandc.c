@@ -60,15 +60,16 @@ int main(int argc, char * argv[])
 
     size_t j = 0;
     while (j < 30) {
-//        ssize_t val = queue.node_array[j % queue.max_capacity]->value;
-        ssize_t val = queue.node_array[j % queue.current_capacity]->value;
+        ssize_t val = queue.node_array[j % queue.current_capacity]->value;              // DEBUG INFO
         printf("Current value: %zu\n", val);
-//        printf("\tand next: %zu\n", queue.node_array[j % queue.max_capacity]->next->value);
-        printf("\tand next: %zu\n", queue.node_array[j % queue.current_capacity]->next->value);
+        printf("\tand next: %zu\n", queue.node_array[j % queue.current_capacity]->next->value);     // DEBUG INFO
         j++;
     }
 
     puts("---------------------------------");
+
+    printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+    printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
 
     for (size_t i = 1; i <= 10; i++) {
         printf("i = %zu\n", i);

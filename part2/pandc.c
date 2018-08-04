@@ -60,13 +60,24 @@ int main(int argc, char * argv[])
 
     size_t j = 0;
     while (j < 30) {
-        ssize_t val = queue.node_array[j % queue.max_capacity]->value;
+//        ssize_t val = queue.node_array[j % queue.max_capacity]->value;
+        ssize_t val = queue.node_array[j % queue.current_capacity]->value;
         printf("Current value: %zu\n", val);
-        printf("\tand next: %zu\n", queue.node_array[j % queue.max_capacity]->next->value);
+//        printf("\tand next: %zu\n", queue.node_array[j % queue.max_capacity]->next->value);
+        printf("\tand next: %zu\n", queue.node_array[j % queue.current_capacity]->next->value);
         j++;
     }
 
     puts("---------------------------------");
+
+    for (size_t i = 1; i <= 10; i++) {
+        printf("i = %zu\n", i);
+
+        printf("Dequeued: %zu\n", dequeue_item(&queue));
+
+        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+    }
 
 
 
@@ -112,6 +123,8 @@ ssize_t dequeue_item(queue_t *q)
     {
         ssize_t old_value = q->head->value;
         q->head = new_head;
+
+        q->current_capacity--;
 
         pthread_mutex_unlock(&q->head_lock);
         free(tmp);

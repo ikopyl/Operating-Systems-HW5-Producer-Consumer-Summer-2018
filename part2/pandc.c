@@ -113,6 +113,34 @@ int main(int argc, char * argv[])
 
         init(&queue, N);
 
+
+        int status_code, i;
+        size_t producer_threads_count = 0;
+        size_t consumer_threads_count = 0;
+
+        pthread_t * producers = calloc(P, sizeof(pthread_t));
+        pthread_t * consumers = calloc(C, sizeof(pthread_t));
+
+        for (i = 0; i < P; i++) {
+            status_code = pthread_create(&producers[i], NULL, produce, (void *) ++producer_threads_count);
+            check_for_errors_and_terminate(status_code, "Failed to create a producer thread...");
+        }
+
+        for (i = 0; i < C; i++) {
+            status_code = pthread_create(&consumers[i], NULL, consume, (void *) ++consumer_threads_count);
+            check_for_errors_and_terminate(status_code, "Failed to create a consumer thread...");
+        }
+
+        for (i = 0; i < P; i++) {
+            status_code = pthread_join(producers[i], NULL);
+            check_for_errors_and_terminate(status_code, "Failed to join a producer thread...");
+        }
+
+        for (i = 0; i < C; i++) {
+            status_code = pthread_join(consumers[i], NULL);
+            check_for_errors_and_terminate(status_code, "Failed to join a consumer thread...");
+        }
+
     }
 
 

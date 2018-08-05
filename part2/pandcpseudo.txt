@@ -1,1 +1,67 @@
 pseudo goes here
+
+Pseudo code for the Consumer thread function:
+
+for (i = 0; i < X items; i++)
+    SemaphoreWait(empty_buffers);
+    Enqueue(queue, ++counter);
+    SemaphoreSignal(full_buffers);
+    Print("Produced ...");
+    sleep(Ptime);
+
+
+Pseudo code for the Producer thread function:
+
+Epsilon = # of Producer Threads * X items / # of Consumer Threads
+Gamma = # of Producer Threads * X items % # of Consumer Threads
+
+for (i = 0; i < Epsilon; i++)
+    if (Gamma > 0)
+        Gamma--;
+        i--;
+
+    SemaphoreWait(full_buffers);
+    Dequeue(queue)
+    SemaphoreSignal(empty_buffers);
+    sleep(Ctime)
+
+
+
+Pseudo code for the Michael and Scott Concurrent Queue:
+
+struct node:
+    value;
+    next_node;
+
+struct queue:
+    head_node;
+    tail_node;
+    head_lock_mutex;
+    tail_lock_mutex;
+
+queue_init(queue)
+    tmp_node.next = NULL;
+    queue.Head = queue.Tail = tmp;
+    initialize mutex head_lock_mutex;
+    initialize mutex tail_lock_mutex;
+
+queue_enqueue(queue, new_value)
+    tmp_node.value = new_value
+    tmp_node.next = NULL;
+
+    lock(tail_lock_mutex)
+    queue.tail.next = tmp_node
+    queue.tail = tmp
+    unlock(tail_lock_mutex)
+
+queue_dequeue(queue)
+    lock(queue.head_lock_mutex)
+    tmp_node = queue.head
+    new_head = tmp_node.next
+
+    consumed_value = head.value
+    queue.head = new_head
+
+    unlock(head_lock_mutex)
+    delete tmp_node
+

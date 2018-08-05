@@ -86,7 +86,6 @@ int compare_two_arrays_verbose_mode(size_t *, size_t *, size_t);
 
 int main(int argc, char * argv[])
 {
-
     if (argc != 7)
     {
         print_ux_message_wrong_number_of_arguments();
@@ -118,12 +117,15 @@ int main(int argc, char * argv[])
         init(&queue, N);
 
 
+
+
         int status_code, i;
         size_t producer_threads_count = 0;
         size_t consumer_threads_count = 0;
 
         pthread_t * producers = calloc(P, sizeof(pthread_t));
         pthread_t * consumers = calloc(C, sizeof(pthread_t));
+
 
         for (i = 0; i < P; i++) {
             status_code = pthread_create(&producers[i], NULL, produce, (void *) ++producer_threads_count);

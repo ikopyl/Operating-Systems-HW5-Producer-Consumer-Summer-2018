@@ -52,8 +52,8 @@ static size_t X = 0;                /** number of elements to enqueue for each P
 static struct timespec Ptime;       /** thread sleep time after each Enqueue() */
 static struct timespec Ctime;       /** thread sleep time after each Dequeue() */
 
-static size_t expected_produced_amount = 0;
-static size_t expected_consumed_amount = 0;
+static size_t expected_produced_amount_total = 0;
+static size_t consume_amount_per_thread = 0;
 
 static int is_overconsume = 0;
 static size_t over_consume_amount = 0;
@@ -104,8 +104,8 @@ int main(int argc, char * argv[])
         Ptime.tv_sec = strtol(argv[5], NULL, 0);
         Ctime.tv_sec = strtol(argv[6], NULL, 0);
 
-        expected_produced_amount = P * X;
-        expected_consumed_amount = P * X / C;
+        expected_produced_amount_total = P * X;
+        consume_amount_per_thread = P * X / C;
         is_overconsume = P * X % C > 0 ? 1 : 0;
         over_consume_amount = (P * X % C);
 
@@ -172,10 +172,10 @@ void check_for_errors_and_terminate(int status_code, char * error_message)
 
 void * produce(void * args)
 {
-    for (int i = 0; i < 10; i++)                                            /***/
+    for (int i = 0; i < X; i++)                                            /***/
     {
         sem_wait(&queue.empty_buffers);
-        ssize_t enqueued_value = enqueue_item(&queue, 231);                 /***/
+        ssize_t enqueued_value = enqueue_item(&queue, ++queue.total_produced);                 /***/
         sem_post(&queue.full_buffers);
         printf(KGRN "Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
         printf(KNRM);
@@ -186,7 +186,7 @@ void * produce(void * args)
 
 void * consume(void * args)
 {
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < consume_amount_per_thread; i++)
     {
         if (is_overconsume && over_consume_amount > 0) {                  /** dirty little hack */
             i--;
@@ -344,12 +344,12 @@ void print_ux_message_success()
     printf("                 Number of Producer threads, P : %6zu\n", P);
     printf("                 Number of Consumer threads, C : %6zu\n", C);
     printf("Number of items to produce by each Producer, X : %6zu\n", X);
-    printf("   Number of items to consume by each Consumer : %6zu\n", expected_consumed_amount);
+    printf("   Number of items to consume by each Consumer : %6zu\n", consume_amount_per_thread);
     printf("                              Over consume on? : %6d\n", is_overconsume);
 
     if (is_overconsume)
     {
-        printf(KCYN"                           Over consume amount : %6zu\n", expected_consumed_amount + over_consume_amount);
+        printf(KCYN"                           Over consume amount : %6zu\n", consume_amount_per_thread + over_consume_amount);
         printf(KNRM);
     }
 

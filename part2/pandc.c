@@ -24,12 +24,8 @@ typedef struct __queue_t {
     node_t *head;
     node_t *tail;
 
-//    size_t current_capacity;
-//    size_t produced_item;
-
     size_t consumed_index;
     size_t produced_index;
-
 
     size_t *log_of_produced_items;
     size_t *log_of_consumed_items;
@@ -62,8 +58,8 @@ static queue_t queue;
 
 
 void init(queue_t *, size_t);
-ssize_t dequeue_item(queue_t *);
-ssize_t enqueue_item(queue_t *, size_t);
+size_t dequeue_item(queue_t *);
+size_t enqueue_item(queue_t *, size_t);
 size_t is_queue_full(queue_t *);
 size_t is_queue_empty(queue_t *);
 
@@ -195,16 +191,17 @@ void * produce(void * args)
         sem_wait(&queue.empty_buffers);
 
         pthread_mutex_lock(&queue.tail_lock);
-        ssize_t enqueued_value = enqueue_item(&queue, (size_t) args);                 /***/
-//        ssize_t enqueued_value = enqueue_item(&queue, ++queue.produced_item);                 /***/
+        size_t enqueued_value = enqueue_item(&queue, (size_t) args);                 /***/
         pthread_mutex_unlock(&queue.tail_lock);
 
-
         sem_post(&queue.full_buffers);
+
         printf(KGRN "Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
         printf(KNRM);
+
         nanosleep(&Ptime, NULL);
     }
+    return (void *) 0;
 }
 
 
@@ -222,15 +219,17 @@ void * consume(void * args)
         sem_wait(&queue.full_buffers);
 
         pthread_mutex_lock(&queue.head_lock);
-        ssize_t dequeued_value = dequeue_item(&queue);
+        size_t dequeued_value = dequeue_item(&queue);
         pthread_mutex_unlock(&queue.head_lock);
 
         sem_post(&queue.empty_buffers);
+
         printf(KYEL "Item #%zu was consumed by consumer thread #%zu\n", dequeued_value, (ssize_t) args);
         printf(KNRM);
-        nanosleep(&Ctime, NULL);
 
+        nanosleep(&Ctime, NULL);
     }
+    return (void *) 0;
 }
 
 
@@ -239,10 +238,6 @@ void init(queue_t *q, size_t queue_size)
     node_t *tmp = malloc(sizeof(node_t));
     tmp->value = 0;
     tmp->next = NULL;
-
-//    q->current_capacity = 0;
-
-//    q->produced_item = 0;
 
     q->consumed_index = 0;
     q->produced_index = 0;
@@ -266,7 +261,7 @@ void init(queue_t *q, size_t queue_size)
  * Function to remove item.
  * Item removed is returned
  */
-ssize_t dequeue_item(queue_t *q)
+size_t dequeue_item(queue_t *q)
 {
 //    pthread_mutex_lock(&q->head_lock);
 
@@ -274,9 +269,9 @@ ssize_t dequeue_item(queue_t *q)
     node_t *new_head = tmp->next;
     if (new_head == NULL)
     {
-        pthread_mutex_unlock(&q->head_lock);
+//        pthread_mutex_unlock(&q->head_lock);
         perror("Failed to dequeue an item: the queue is empty...");
-        return -1;
+        return 0;
     }
     else
     {
@@ -284,8 +279,6 @@ ssize_t dequeue_item(queue_t *q)
         q->head = new_head;
 
         q->tail->next = q->head;
-
-//        q->current_capacity--;
 
         q->log_of_consumed_items[q->consumed_index] = consumed_value;
         q->consumed_index++;
@@ -306,13 +299,13 @@ ssize_t dequeue_item(queue_t *q)
  * the return value, do not change the
  * return type to void. 
  */
-ssize_t enqueue_item(queue_t *q, size_t item)
+size_t enqueue_item(queue_t *q, size_t item)
 {
     node_t *new_node = malloc(sizeof(node_t));
     if (new_node == NULL)
     {
         perror("Failed to allocate memory for new node...");
-        return -1;
+        return 0;
     }
     else
     {
@@ -321,16 +314,12 @@ ssize_t enqueue_item(queue_t *q, size_t item)
 
 //        pthread_mutex_lock(&q->tail_lock);
 
-
         q->tail->next = new_node;
         q->tail = new_node;
 
         if (is_queue_empty(q)) {                /** for now q->current_capacity constitutes the emptiness/fullness of the queue */
             q->head = q->tail;
         }
-
-//        q->current_capacity++;
-
 
         q->log_of_produced_items[q->produced_index] = q->tail->value;
         q->produced_index++;

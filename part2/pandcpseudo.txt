@@ -1,1 +1,28 @@
 pseudo goes here
+
+Pseudo code for the Consumer thread function:
+
+for (i = 0; i < X items; i++)
+    SemaphoreWait(empty_buffers);
+    Enqueue(queue, ++counter);
+    SemaphoreSignal(full_buffers);
+    Print("Produced ...");
+    sleep(Ptime);
+
+
+Pseudo code for the Producer thread function:
+
+Epsilon = # of Producer Threads * X items / # of Consumer Threads
+Gamma = # of Producer Threads * X items % # of Consumer Threads
+
+for (i = 0; i < Epsilon; i++)
+    if (Gamma > 0)
+        Gamma--;
+        i--;
+
+    SemaphoreWait(full_buffers);
+    Dequeue(queue)
+    SemaphoreSignal(empty_buffers);
+    sleep(Ctime)
+
+

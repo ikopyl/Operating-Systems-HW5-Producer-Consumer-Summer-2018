@@ -29,7 +29,12 @@ typedef struct __queue_t {
 
     size_t max_capacity;
     size_t current_capacity;
-    size_t total_processed;
+
+    size_t total_produced;
+    size_t total_consumed;
+
+    size_t *log_of_produced_items;
+    size_t *log_of_consumed_items;
 
     pthread_mutex_t head_lock;
     pthread_mutex_t tail_lock;
@@ -40,12 +45,18 @@ typedef struct __queue_t {
 } queue_t;
 
                                     /** COMMAND LINE PARAMETERS: */
-static size_t N = 0;          /** number of buffers of size 1 */
+static size_t N = 0;                /** number of buffers of size 1 */
 static size_t P = 0;                /** number of producer threads */
 static size_t C = 0;                /** number of consumer threads */
 static size_t X = 0;                /** number of elements to enqueue for each Producer thread */
 static struct timespec Ptime;       /** thread sleep time after each Enqueue() */
 static struct timespec Ctime;       /** thread sleep time after each Dequeue() */
+
+static size_t expected_produced_amount = 0;
+static size_t expected_consumed_amount = 0;
+
+static int is_overconsume = 0;
+static size_t over_consume_amount = 0;
 
 static queue_t queue;
 
@@ -62,6 +73,7 @@ void * consume(void *);
 void print_queue_recursively(node_t *, node_t *);
 void print_ux_message_wrong_number_of_arguments();
 void print_ux_message_success();
+void print_current_time();
 void check_for_errors_and_terminate(int, char *);
 
 
@@ -76,6 +88,9 @@ int main(int argc, char * argv[])
     }
     else
     {
+        print_current_time();
+
+
         Ptime.tv_sec = 0;
         Ptime.tv_nsec = 0;
 
@@ -88,6 +103,11 @@ int main(int argc, char * argv[])
         X = (size_t) strtol(argv[4], NULL, 0);
         Ptime.tv_sec = strtol(argv[5], NULL, 0);
         Ctime.tv_sec = strtol(argv[6], NULL, 0);
+
+        expected_produced_amount = P * X;
+        expected_consumed_amount = P * X / C;
+        is_overconsume = P * X % C > 0 ? 1 : 0;
+        over_consume_amount = (P * X / C) + (P * X % C);
 
         print_ux_message_success();
 
@@ -158,7 +178,12 @@ void init(queue_t *q, size_t queue_size)
 
     q->max_capacity = queue_size;
     q->current_capacity = 0;
-    q->total_processed = 0;
+
+    q->total_produced = 0;
+    q->total_consumed = 0;
+
+    q->log_of_produced_items = calloc(P * X, sizeof(size_t));
+    q->log_of_consumed_items = calloc(P * X, sizeof(size_t));
 
     q->head = q->tail = tmp;
 
@@ -285,12 +310,27 @@ void print_ux_message_success()
     printf("                 Number of Producer threads, P : %6zu\n", P);
     printf("                 Number of Consumer threads, C : %6zu\n", C);
     printf("Number of items to produce by each Producer, X : %6zu\n", X);
-    printf("   Number of items to consume by each Consumer : %6zu\n", P * X / C);
-    printf("                              Over consume on? : %6zu\n", (size_t) 1);
+    printf("   Number of items to consume by each Consumer : %6zu\n", expected_consumed_amount);
+    printf("                              Over consume on? : %6d\n", is_overconsume);
 
-    printf(KCYN"                           Over consume amount : %6zu\n", (P * X / C) + (P * X % C));
-    printf(KNRM);
+    if (is_overconsume)
+    {
+        printf(KCYN"                           Over consume amount : %6zu\n", over_consume_amount);
+        printf(KNRM);
+    }
+
 
     printf("           Time each Producer sleeps (seconds) : %6zu\n", Ptime.tv_sec);
     printf("           Time each Consumer sleeps (seconds) : %6zu\n", Ctime.tv_sec);
+}
+
+
+void print_current_time()
+{
+    time_t rawtime;
+    struct tm * timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    printf("Current time: %s\n\n", asctime (timeinfo));
 }

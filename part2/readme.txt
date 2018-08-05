@@ -24,5 +24,4 @@ For example:
 
 
 Project Description:
-
-
+In this project I was trying to solve a problem of synchronization and interthread communication while solving the classical problem. One of the main challenges was to make sure that the Consumer does not oupaces the Producer. I did my best to ensure that the threads behave nicely. I decided to use a the Michael and Scott algorithm for implementing a concurrent queue. But I stumbled upon unexpected issues which could be caused by potential bugs in either the algorithm itself or my implementation.

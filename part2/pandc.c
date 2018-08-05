@@ -13,10 +13,7 @@
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
 #define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
 #define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
 
 typedef struct __node_t {
     size_t value;
@@ -27,10 +24,8 @@ typedef struct __queue_t {
     node_t *head;
     node_t *tail;
 
-    size_t max_capacity;
-    size_t current_capacity;
-
-    size_t total_produced;
+//    size_t current_capacity;
+//    size_t produced_item;
 
     size_t consumed_index;
     size_t produced_index;
@@ -121,7 +116,7 @@ int main(int argc, char * argv[])
 
 
 
-        int status_code, i;
+        int status_code;
         size_t producer_threads_count = 0;
         size_t consumer_threads_count = 0;
 
@@ -131,30 +126,30 @@ int main(int argc, char * argv[])
         pthread_mutex_init(&sneaky_mutex, NULL);
 
 
-        for (i = 0; i < P; i++) {
-            status_code = pthread_create(&producers[i], NULL, produce, (void *) ++producer_threads_count);
+        for (int i = 0; i < P; i++) {
+            producer_threads_count++;
+            status_code = pthread_create(&producers[i], NULL, produce, (void *) producer_threads_count);
             check_for_errors_and_terminate(status_code, "Failed to create a producer thread...");
         }
 
-        for (i = 0; i < C; i++) {
-            status_code = pthread_create(&consumers[i], NULL, consume, (void *) ++consumer_threads_count);
+        for (int i = 0; i < C; i++) {
+            consumer_threads_count++;
+            status_code = pthread_create(&consumers[i], NULL, consume, (void *) consumer_threads_count);
             check_for_errors_and_terminate(status_code, "Failed to create a consumer thread...");
         }
 
-        for (i = 0; i < P; i++) {
+        for (int i = 0; i < P; i++) {
             status_code = pthread_join(producers[i], NULL);
             check_for_errors_and_terminate(status_code, "Failed to join a producer thread...");
             printf("Producer Thread #%d joined.\n", i+1);
         }
 
-        for (i = 0; i < C; i++) {
+        for (int i = 0; i < C; i++) {
             status_code = pthread_join(consumers[i], NULL);
             check_for_errors_and_terminate(status_code, "Failed to join a consumer thread...");
             printf("Consumer Thread #%d joined.\n", i+1);
         }
         time_t finish_time = print_current_time();
-
-//        time_t delta_time = finish_time - start_time;
 
         int cmp = compare_two_arrays_verbose_mode(
                 queue.log_of_produced_items,
@@ -199,7 +194,12 @@ void * produce(void * args)
     {
         sem_wait(&queue.empty_buffers);
 
-        ssize_t enqueued_value = enqueue_item(&queue, ++queue.total_produced);                 /***/
+        pthread_mutex_lock(&queue.tail_lock);
+        ssize_t enqueued_value = enqueue_item(&queue, (size_t) args);                 /***/
+//        ssize_t enqueued_value = enqueue_item(&queue, ++queue.produced_item);                 /***/
+        pthread_mutex_unlock(&queue.tail_lock);
+
+
         sem_post(&queue.full_buffers);
         printf(KGRN "Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
         printf(KNRM);
@@ -220,7 +220,11 @@ void * consume(void * args)
         }
 
         sem_wait(&queue.full_buffers);
+
+        pthread_mutex_lock(&queue.head_lock);
         ssize_t dequeued_value = dequeue_item(&queue);
+        pthread_mutex_unlock(&queue.head_lock);
+
         sem_post(&queue.empty_buffers);
         printf(KYEL "Item #%zu was consumed by consumer thread #%zu\n", dequeued_value, (ssize_t) args);
         printf(KNRM);
@@ -236,10 +240,9 @@ void init(queue_t *q, size_t queue_size)
     tmp->value = 0;
     tmp->next = NULL;
 
-    q->max_capacity = queue_size;
-    q->current_capacity = 0;
+//    q->current_capacity = 0;
 
-    q->total_produced = 0;
+//    q->produced_item = 0;
 
     q->consumed_index = 0;
     q->produced_index = 0;
@@ -265,7 +268,7 @@ void init(queue_t *q, size_t queue_size)
  */
 ssize_t dequeue_item(queue_t *q)
 {
-    pthread_mutex_lock(&q->head_lock);
+//    pthread_mutex_lock(&q->head_lock);
 
     node_t *tmp = q->head;
     node_t *new_head = tmp->next;
@@ -282,12 +285,12 @@ ssize_t dequeue_item(queue_t *q)
 
         q->tail->next = q->head;
 
-        q->current_capacity--;
+//        q->current_capacity--;
 
         q->log_of_consumed_items[q->consumed_index] = consumed_value;
         q->consumed_index++;
 
-        pthread_mutex_unlock(&q->head_lock);
+//        pthread_mutex_unlock(&q->head_lock);
         free(tmp);
 
         return consumed_value;
@@ -316,7 +319,7 @@ ssize_t enqueue_item(queue_t *q, size_t item)
         new_node->value = item;
         new_node->next = NULL;
 
-        pthread_mutex_lock(&q->tail_lock);
+//        pthread_mutex_lock(&q->tail_lock);
 
 
         q->tail->next = new_node;
@@ -326,7 +329,7 @@ ssize_t enqueue_item(queue_t *q, size_t item)
             q->head = q->tail;
         }
 
-        q->current_capacity++;
+//        q->current_capacity++;
 
 
         q->log_of_produced_items[q->produced_index] = q->tail->value;
@@ -337,7 +340,7 @@ ssize_t enqueue_item(queue_t *q, size_t item)
             q->tail->next = q->head;
         }
 
-        pthread_mutex_unlock(&q->tail_lock);
+//        pthread_mutex_unlock(&q->tail_lock);
 
         return q->tail->value;
     }
@@ -349,7 +352,6 @@ size_t is_queue_full(queue_t *q)
     int tmp = 0;
     sem_getvalue(&q->empty_buffers, &tmp);
     if (tmp == 0)
-//    if (q->current_capacity == q->max_capacity)
         return 1;
     return 0;
 }
@@ -359,7 +361,6 @@ size_t is_queue_empty(queue_t *q)
     int tmp = 0;
     sem_getvalue(&q->full_buffers, &tmp);
     if (tmp == 0)
-//    if (q->current_capacity == 0)
         return 1;
     return 0;
 }

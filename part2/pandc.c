@@ -76,7 +76,7 @@ void * consume(void *);
 void print_queue_recursively(node_t *, node_t *);
 void print_ux_message_wrong_number_of_arguments();
 void print_ux_message_success();
-void print_current_time();
+time_t print_current_time();
 void check_for_errors_and_terminate(int, char *);
 
 int compare_two_arrays_verbose_mode(size_t *, size_t *, size_t);
@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
     }
     else
     {
-        print_current_time();
+        time_t start_time = print_current_time();
 
         Ptime.tv_sec = 0;
         Ptime.tv_nsec = 0;
@@ -148,13 +148,17 @@ int main(int argc, char * argv[])
             check_for_errors_and_terminate(status_code, "Failed to join a consumer thread...");
             printf("Consumer Thread #%d joined.\n", i+1);
         }
-        print_current_time();
+        time_t finish_time = print_current_time();
+
+//        time_t delta_time = finish_time - start_time;
 
         int cmp = compare_two_arrays_verbose_mode(
                 queue.log_of_produced_items,
                 queue.log_of_consumed_items,
                 expected_produced_amount_total);
-        printf("Consume and Produce Arrays %s\n", cmp == 0 ? "Match!" : "Do Not Match!");
+        printf("\nConsume and Produce Arrays %s\n\n", cmp == 0 ? "Match!" : "Do Not Match!");
+        
+        printf("Total runtime: %6.1f seconds\n", (double) finish_time - start_time);
 
     }
 
@@ -386,7 +390,7 @@ void print_ux_message_success()
 }
 
 
-void print_current_time()
+time_t print_current_time()
 {
     time_t rawtime;
     struct tm * timeinfo;
@@ -394,6 +398,8 @@ void print_current_time()
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     printf("Current time: %s\n\n", asctime (timeinfo));
+
+    return rawtime;
 }
 
 

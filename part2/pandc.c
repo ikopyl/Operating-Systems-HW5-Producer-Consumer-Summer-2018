@@ -31,7 +31,10 @@ typedef struct __queue_t {
     size_t current_capacity;
 
     size_t total_produced;
-    size_t total_consumed;
+
+    size_t consumed_index;
+    size_t produced_index;
+
 
     size_t *log_of_produced_items;
     size_t *log_of_consumed_items;
@@ -76,6 +79,8 @@ void print_ux_message_success();
 void print_current_time();
 void check_for_errors_and_terminate(int, char *);
 
+int compare_two_arrays_verbose_mode(size_t *, size_t *, size_t);
+
 
 
 
@@ -89,7 +94,6 @@ int main(int argc, char * argv[])
     else
     {
         print_current_time();
-
 
         Ptime.tv_sec = 0;
         Ptime.tv_nsec = 0;
@@ -134,12 +138,21 @@ int main(int argc, char * argv[])
         for (i = 0; i < P; i++) {
             status_code = pthread_join(producers[i], NULL);
             check_for_errors_and_terminate(status_code, "Failed to join a producer thread...");
+            printf("Producer Thread #%d joined.\n", i+1);
         }
 
         for (i = 0; i < C; i++) {
             status_code = pthread_join(consumers[i], NULL);
             check_for_errors_and_terminate(status_code, "Failed to join a consumer thread...");
+            printf("Consumer Thread #%d joined.\n", i+1);
         }
+        print_current_time();
+
+        int cmp = compare_two_arrays_verbose_mode(
+                queue.log_of_produced_items,
+                queue.log_of_consumed_items,
+                expected_produced_amount_total);
+        printf("Consume and Produce Arrays %s\n", cmp == 0 ? "Match!" : "Do Not Match!");
 
     }
 
@@ -175,6 +188,7 @@ void * produce(void * args)
     for (int i = 0; i < X; i++)                                            /***/
     {
         sem_wait(&queue.empty_buffers);
+
         ssize_t enqueued_value = enqueue_item(&queue, ++queue.total_produced);                 /***/
         sem_post(&queue.full_buffers);
         printf(KGRN "Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
@@ -214,7 +228,9 @@ void init(queue_t *q, size_t queue_size)
     q->current_capacity = 0;
 
     q->total_produced = 0;
-    q->total_consumed = 0;
+
+    q->consumed_index = 0;
+    q->produced_index = 0;
 
     q->log_of_produced_items = calloc(P * X, sizeof(size_t));
     q->log_of_consumed_items = calloc(P * X, sizeof(size_t));
@@ -249,17 +265,20 @@ ssize_t dequeue_item(queue_t *q)
     }
     else
     {
-        ssize_t old_value = q->head->value;
+        size_t consumed_value = q->head->value;
         q->head = new_head;
 
         q->tail->next = q->head;
 
         q->current_capacity--;
 
+        q->log_of_consumed_items[q->consumed_index] = consumed_value;
+        q->consumed_index++;
+
         pthread_mutex_unlock(&q->head_lock);
         free(tmp);
 
-        return old_value;
+        return consumed_value;
     }
 }
 
@@ -296,6 +315,11 @@ ssize_t enqueue_item(queue_t *q, size_t item)
         }
 
         q->current_capacity++;
+
+
+        q->log_of_produced_items[q->produced_index] = q->tail->value;
+        q->produced_index++;
+
 
         if (is_queue_full(q)) {
             q->tail->next = q->head;
@@ -356,6 +380,7 @@ void print_ux_message_success()
 
     printf("           Time each Producer sleeps (seconds) : %6zu\n", Ptime.tv_sec);
     printf("           Time each Consumer sleeps (seconds) : %6zu\n", Ctime.tv_sec);
+    puts("");
 }
 
 
@@ -367,4 +392,22 @@ void print_current_time()
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     printf("Current time: %s\n\n", asctime (timeinfo));
+}
+
+
+int compare_two_arrays_verbose_mode(size_t * producer_array, size_t * consumer_array, size_t n)
+{
+    int is_mismatch_found = 0;
+    printf("Producer Array\t| Consumer Array\n");
+
+    for (int i = 0; i < n; i++) {
+        if (producer_array[i] == consumer_array[i]) {
+            printf(KGRN "%3zu\t\t| %3zu\n", producer_array[i], consumer_array[i]);
+        } else {
+            printf(KRED "%3zu\t\t| %3zu\n", producer_array[i], consumer_array[i]);
+            is_mismatch_found = 1;
+        }
+        printf(KNRM);
+    }
+    return is_mismatch_found;
 }

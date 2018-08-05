@@ -12,12 +12,13 @@ for (i = 0; i < X items; i++)
 
 Pseudo code for the Producer thread function:
 
-Epsilon = # of Producer Threads * X items / # of Consumer Threads
-Gamma = # of Producer Threads * X items % # of Consumer Threads
+Global Variable: Epsilon = # of Producer Threads * X items / # of Consumer Threads
+
+Global Variable: Gamma = # of Producer Threads * X items % # of Consumer Threads
 
 for (i = 0; i < Epsilon; i++)
     if (Gamma > 0)
-        Gamma--;
+        Gamma--;        // won't occur again once Gamma is depleted
         i--;
 
     SemaphoreWait(full_buffers);

@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
         expected_produced_amount = P * X;
         expected_consumed_amount = P * X / C;
         is_overconsume = P * X % C > 0 ? 1 : 0;
-        over_consume_amount = (P * X / C) + (P * X % C);
+        over_consume_amount = (P * X % C);
 
         print_ux_message_success();
 
@@ -160,12 +160,18 @@ void * consume(void * args)
 {
     for (int i = 0; i < 10; i++)
     {
+        if (is_overconsume && over_consume_amount > 0) {                  /** dirty little hack */
+            i--;
+            over_consume_amount--;
+        }
+
         sem_wait(&queue.full_buffers);
         ssize_t dequeued_value = dequeue_item(&queue);
         sem_post(&queue.empty_buffers);
         printf(KYEL "Item #%zu was consumed by consumer thread #%zu\n", dequeued_value, (ssize_t) args);
         printf(KNRM);
         nanosleep(&Ctime, NULL);
+
     }
 }
 
@@ -315,7 +321,7 @@ void print_ux_message_success()
 
     if (is_overconsume)
     {
-        printf(KCYN"                           Over consume amount : %6zu\n", over_consume_amount);
+        printf(KCYN"                           Over consume amount : %6zu\n", expected_consumed_amount + over_consume_amount);
         printf(KNRM);
     }
 

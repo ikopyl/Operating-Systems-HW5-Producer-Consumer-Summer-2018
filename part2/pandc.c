@@ -346,7 +346,10 @@ ssize_t enqueue_item(queue_t *q, size_t item)
 
 size_t is_queue_full(queue_t *q)
 {
-    if (q->current_capacity == q->max_capacity)
+    int tmp = 0;
+    sem_getvalue(&q->empty_buffers, &tmp);
+    if (tmp == 0)
+//    if (q->current_capacity == q->max_capacity)
         return 1;
     return 0;
 }

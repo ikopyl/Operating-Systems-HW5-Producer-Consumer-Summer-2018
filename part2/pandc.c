@@ -8,6 +8,15 @@
 #include <semaphore.h>
 #include <errno.h>
 
+/** color output thingy */
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
 
 typedef struct __node_t {
     size_t value;
@@ -30,10 +39,13 @@ typedef struct __queue_t {
 
 } queue_t;
 
-
-static struct timespec Ptime;
-static struct timespec Ctime;
-
+                                    /** COMMAND LINE PARAMETERS: */
+static size_t N = 0;                /** number of buffers of size 1 */
+static size_t P = 0;                /** number of producer threads */
+static size_t C = 0;                /** number of consumer threads */
+static size_t X = 0;                /** number of elements to enqueue for each Producer thread */
+static struct timespec Ptime;       /** thread sleep time after each Enqueue() */
+static struct timespec Ctime;       /** thread sleep time after each Dequeue() */
 
 static queue_t queue;
 
@@ -58,64 +70,93 @@ int main(int argc, char * argv[])
     init(&queue, 10);
 
     Ptime.tv_sec = 0;
-    Ptime.tv_nsec = 10;             /***/
+    Ptime.tv_nsec = 0;
 
     Ctime.tv_sec = 0;
-    Ctime.tv_nsec = 10;             /***/
+    Ctime.tv_nsec = 0;
 
+    if (argc != 7)
+    {
+        puts("Wrong number of arguments.");
+        puts("Please specify 6 command line arguments as follows:");
+        printf("\t$ ./pandc <N> <P> <C> <X> <Ptime> <Ctime>\n");
+        printf("where\n");
+        printf("\tN - number of buffers of size 1 (size of the queue)\n");
+        printf("\tP - number of Producer threads\n");
+        printf("\tC - number of Consumer threads\n");
+        printf("\tX - number of items to enqueue for each Producer thread");
+        printf("\tPtime - sleep time (seconds) for a Producer thread after Enqueue() call\n");
+        printf("\tCtime - sleep time (seconds) for a Consumer thread after Dequeue() call\n");
+    }
+    else
+    {
+        N = (size_t) strtol(argv[1], NULL, 0);
+        P = (size_t) strtol(argv[2], NULL, 0);
+        C = (size_t) strtol(argv[3], NULL, 0);
+        X = (size_t) strtol(argv[4], NULL, 0);
+        Ptime.tv_sec = strtol(argv[5], NULL, 0);
+        Ctime.tv_sec = strtol(argv[6], NULL, 0);
 
-    printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
-    printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
-    printf("Size of queue: %zu\n", sizeof(queue));
+        printf("                 Number of buffers of size1, N : %6zu\n", N);
+        printf("                 Number of Producer threads, P : %6zu\n", P);
+        printf("                 Number of Consumer threads, C : %6zu\n", C);
+        printf("Number of items to produce by each Producer, X : %6zu\n", X);
+        printf("   Number of items to consume by each Consumer : %6zu\n", P * X / C + P * X % C);
+        printf("                              Over consume on? : %6zu\n", (size_t) 1);
 
-    for (size_t i = 1; i <= 10; i++) {
-        printf("i = %zu\n", i);
+        printf(KCYN"                           Over consume amount : %6zu\n", (size_t) 12);
+        printf(KNRM);
 
-        printf("Enqueued: %zu\n", enqueue_item(&queue, i));
+        printf("           Time each Producer sleeps (seconds) : %6zu\n", Ptime.tv_sec);
+        printf("           Time each Consumer sleeps (seconds) : %6zu\n", Ctime.tv_sec);
 
-        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
-        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
     }
 
-    puts("---------------------------------");
 
-//    size_t j = 0;
-//    while (j < 30) {
-//        ssize_t val = queue.node_array[j % queue.current_capacity]->value;              // DEBUG INFO
-//        printf("Current value: %zu\n", val);
-//        printf("\tand next: %zu\n", queue.node_array[j % queue.current_capacity]->next->value);     // DEBUG INFO
-//        j++;
+
+
+//    printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+//    printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+//    printf("Size of queue: %zu\n", sizeof(queue));
+//
+//    for (size_t i = 1; i <= 10; i++) {
+//        printf("i = %zu\n", i);
+//
+//        printf("Enqueued: %zu\n", enqueue_item(&queue, i));
+//
+//        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+//        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
 //    }
-
-    print_queue_recursively(queue.head, queue.tail);
-
-    puts("---------------------------------");
-
-    printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
-    printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
-
-    for (size_t i = 1; i <= 5; i++) {
-        printf("i = %zu\n", i);
-
-        printf("Dequeued: %zu\n", dequeue_item(&queue));
-
-        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
-        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
-    }
-
-    print_queue_recursively(queue.head, queue.tail);
-
-
-    for (size_t i = 1; i <= 5; i++) {
-        printf("i = %zu\n", i);
-
-        printf("Dequeued: %zu\n", dequeue_item(&queue));
-
-        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
-        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
-    }
-
-    print_queue_recursively(queue.head, queue.tail);
+//
+//    print_queue_recursively(queue.head, queue.tail);
+//
+//    puts("---------------------------------");
+//
+//    printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+//    printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+//
+//    for (size_t i = 1; i <= 5; i++) {
+//        printf("i = %zu\n", i);
+//
+//        printf("Dequeued: %zu\n", dequeue_item(&queue));
+//
+//        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+//        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+//    }
+//
+//    print_queue_recursively(queue.head, queue.tail);
+//
+//
+//    for (size_t i = 1; i <= 5; i++) {
+//        printf("i = %zu\n", i);
+//
+//        printf("Dequeued: %zu\n", dequeue_item(&queue));
+//
+//        printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
+//        printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
+//    }
+//
+//    print_queue_recursively(queue.head, queue.tail);
 
     return 0;
 }
@@ -144,12 +185,13 @@ void check_for_errors_and_terminate(int status_code, char * error_message)
 
 void * produce(void * args)
 {
-    for (int i = 0; i < 10; i++)                    /***/
+    for (int i = 0; i < 10; i++)                                            /***/
     {
         sem_wait(&queue.empty_buffers);
-        ssize_t enqueued_value = enqueue_item(&queue, 231);                  /***/
+        ssize_t enqueued_value = enqueue_item(&queue, 231);                 /***/
         sem_post(&queue.full_buffers);
-        printf("Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
+        printf(KGRN "Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
+        printf(KNRM);
         nanosleep(&Ptime, NULL);
     }
 }
@@ -162,7 +204,8 @@ void * consume(void * args)
         sem_wait(&queue.full_buffers);
         ssize_t dequeued_value = dequeue_item(&queue);
         sem_post(&queue.empty_buffers);
-        printf("Item #%zu was consumed by consumer thread #%zu\n", dequeued_value, (ssize_t) args);
+        printf(KYEL "Item #%zu was consumed by consumer thread #%zu\n", dequeued_value, (ssize_t) args);
+        printf(KNRM);
         nanosleep(&Ctime, NULL);
     }
 }

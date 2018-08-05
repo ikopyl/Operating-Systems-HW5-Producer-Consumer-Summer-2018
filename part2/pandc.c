@@ -58,6 +58,8 @@ static struct timespec Ctime;       /** thread sleep time after each Dequeue() *
 static size_t expected_produced_amount_total = 0;
 static size_t consume_amount_per_thread = 0;
 
+static pthread_mutex_t sneaky_mutex;
+
 static int is_overconsume = 0;
 static size_t over_consume_amount = 0;
 
@@ -126,6 +128,8 @@ int main(int argc, char * argv[])
         pthread_t * producers = calloc(P, sizeof(pthread_t));
         pthread_t * consumers = calloc(C, sizeof(pthread_t));
 
+        pthread_mutex_init(&sneaky_mutex, NULL);
+
 
         for (i = 0; i < P; i++) {
             status_code = pthread_create(&producers[i], NULL, produce, (void *) ++producer_threads_count);
@@ -157,7 +161,7 @@ int main(int argc, char * argv[])
                 queue.log_of_consumed_items,
                 expected_produced_amount_total);
         printf("\nConsume and Produce Arrays %s\n\n", cmp == 0 ? "Match!" : "Do Not Match!");
-        
+
         printf("Total runtime: %6.1f seconds\n", (double) finish_time - start_time);
 
     }
@@ -209,8 +213,10 @@ void * consume(void * args)
     for (int i = 0; i < consume_amount_per_thread; i++)
     {
         if (is_overconsume && over_consume_amount > 0) {                  /** dirty little hack */
+            pthread_mutex_lock(&sneaky_mutex);
             i--;
             over_consume_amount--;
+            pthread_mutex_unlock(&sneaky_mutex);
         }
 
         sem_wait(&queue.full_buffers);
@@ -347,7 +353,10 @@ size_t is_queue_full(queue_t *q)
 
 size_t is_queue_empty(queue_t *q)
 {
-    if (q->current_capacity == 0)
+    int tmp = 0;
+    sem_getvalue(&q->full_buffers, &tmp);
+    if (tmp == 0)
+//    if (q->current_capacity == 0)
         return 1;
     return 0;
 }

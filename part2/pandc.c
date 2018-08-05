@@ -6,9 +6,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <semaphore.h>
+#include <errno.h>
 
 
-/** All hail OOP! */
 typedef struct __node_t {
     size_t value;
     struct __node_t *next;
@@ -20,30 +20,49 @@ typedef struct __queue_t {
 
     size_t max_capacity;
     size_t current_capacity;
-
-//    node_t ** node_array;
+    size_t total_processed;
 
     pthread_mutex_t head_lock;
     pthread_mutex_t tail_lock;
 
+    sem_t empty_buffers;
+    sem_t full_buffers;
+
 } queue_t;
 
 
+static struct timespec Ptime;
+static struct timespec Ctime;
 
-void init(queue_t *, size_t);
+
+static queue_t queue;
+
+
+void init(queue_t *, unsigned int);
 ssize_t dequeue_item(queue_t *);
 ssize_t enqueue_item(queue_t *, size_t);
 size_t is_queue_full(queue_t *);
 size_t is_queue_empty(queue_t *);
 
+void * produce(void *);
+void * consume(void *);
+
 void print_queue_recursively(node_t *, node_t *);
+void check_for_errors_and_terminate(int, char *);
+
+
 
 
 int main(int argc, char * argv[])
 {
-
-    queue_t queue;
     init(&queue, 10);
+
+    Ptime.tv_sec = 0;
+    Ptime.tv_nsec = 10;             /***/
+
+    Ctime.tv_sec = 0;
+    Ctime.tv_nsec = 10;             /***/
+
 
     printf("Is queue empty? %s\n", is_queue_empty(&queue) ? "true" : "false");
     printf("Is queue full? %s\n", is_queue_full(&queue) ? "true" : "false");
@@ -114,9 +133,44 @@ void print_queue_recursively(node_t * head, node_t * tail)
 }
 
 
+void check_for_errors_and_terminate(int status_code, char * error_message)
+{
+    if (status_code < 0) {
+        perror(error_message);
+        exit(errno);
+    }
+}
 
 
-void init(queue_t *q, size_t queue_size)
+void * produce(void * args)
+{
+    for (int i = 0; i < 10; i++)                    /***/
+    {
+        sem_wait(&queue.empty_buffers);
+        ssize_t enqueued_value = enqueue_item(&queue, 231);                  /***/
+        sem_post(&queue.full_buffers);
+        printf("Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
+        nanosleep(&Ptime, NULL);
+    }
+}
+
+
+void * consume(void * args)
+{
+    for (int i = 0; i < 10; i++)
+    {
+        sem_wait(&queue.full_buffers);
+        ssize_t dequeued_value = dequeue_item(&queue);
+        sem_post(&queue.empty_buffers);
+        printf("Item #%zu was consumed by consumer thread #%zu\n", dequeued_value, (ssize_t) args);
+        nanosleep(&Ctime, NULL);
+    }
+}
+
+
+
+
+void init(queue_t *q, unsigned int queue_size)
 {
     node_t *tmp = malloc(sizeof(node_t));
     tmp->value = 0;
@@ -125,12 +179,18 @@ void init(queue_t *q, size_t queue_size)
 //    q->node_array = calloc(queue_size, sizeof(node_t *));
     q->max_capacity = queue_size;
     q->current_capacity = 0;
+    q->total_processed = 0;
 
     q->head = q->tail = tmp;
 //    q->node_array[q->current_capacity] = tmp;
 
     pthread_mutex_init(&q->head_lock, NULL);
     pthread_mutex_init(&q->tail_lock, NULL);
+
+    int status = sem_init(&q->empty_buffers, 0, queue_size);
+    check_for_errors_and_terminate(status, "Failed to initialize a semaphore...");
+    status = sem_init(&q->full_buffers, 0, 0);
+    check_for_errors_and_terminate(status, "Failed to initialize a semaphore...");
 }
 
 /* 

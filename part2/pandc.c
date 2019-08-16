@@ -167,6 +167,7 @@ int main(int argc, char * argv[])
 void print_queue_recursively(node_t * head, node_t * tail)
 {
     printf("%zu\n", head->value);
+//    printf("%zu\t", head->value);
     if (head == tail) {
         return;
     } else {
@@ -189,11 +190,11 @@ void * produce(void * args)
     for (int i = 0; i < X; i++)                                            /***/
     {
         sem_wait(&queue.empty_buffers);
-
         pthread_mutex_lock(&queue.tail_lock);
-        size_t enqueued_value = enqueue_item(&queue, (size_t) args);                 /***/
-        pthread_mutex_unlock(&queue.tail_lock);
 
+        size_t enqueued_value = enqueue_item(&queue, (size_t) args);                 /***/
+
+        pthread_mutex_unlock(&queue.tail_lock);
         sem_post(&queue.full_buffers);
 
         printf(KGRN "Item #%zu was produced by producer thread #%zu\n", enqueued_value, (size_t) args);
@@ -209,6 +210,9 @@ void * consume(void * args)
 {
     for (int i = 0; i < consume_amount_per_thread; i++)
     {
+        int tmp = 0;
+        sem_getvalue(&queue.empty_buffers, &tmp);
+
         if (is_overconsume && over_consume_amount > 0) {                  /** dirty little hack */
             pthread_mutex_lock(&sneaky_mutex);
             i--;
@@ -217,11 +221,11 @@ void * consume(void * args)
         }
 
         sem_wait(&queue.full_buffers);
-
         pthread_mutex_lock(&queue.head_lock);
-        size_t dequeued_value = dequeue_item(&queue);
-        pthread_mutex_unlock(&queue.head_lock);
 
+        size_t dequeued_value = dequeue_item(&queue);
+
+        pthread_mutex_unlock(&queue.head_lock);
         sem_post(&queue.empty_buffers);
 
         printf(KYEL "Item #%zu was consumed by consumer thread #%zu\n", dequeued_value, (ssize_t) args);
@@ -235,7 +239,8 @@ void * consume(void * args)
 
 void init(queue_t *q, size_t queue_size)
 {
-    node_t *tmp = malloc(sizeof(node_t));
+//    node_t *tmp = malloc(sizeof(node_t));
+    node_t *tmp = calloc(1, sizeof(node_t));
     tmp->value = 0;
     tmp->next = NULL;
 
@@ -301,7 +306,8 @@ size_t dequeue_item(queue_t *q)
  */
 size_t enqueue_item(queue_t *q, size_t item)
 {
-    node_t *new_node = malloc(sizeof(node_t));
+//    node_t *new_node = malloc(sizeof(node_t));
+    node_t *new_node = calloc(1, sizeof(node_t));
     if (new_node == NULL)
     {
         perror("Failed to allocate memory for new node...");
@@ -328,6 +334,13 @@ size_t enqueue_item(queue_t *q, size_t item)
         if (is_queue_full(q)) {
             q->tail->next = q->head;
         }
+
+//        int tmp = 0;
+//        sem_getvalue(&q->empty_buffers, &tmp);
+//        if (tmp == 1) {
+//            q->tail->next = q->head;
+//            q->head->next = q->tail;
+//        }
 
 //        pthread_mutex_unlock(&q->tail_lock);
 
